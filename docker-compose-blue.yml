@@ -1,0 +1,22 @@
+version: "3.9"
+services:
+  app-blue:
+    image: your-spring-boot-image:latest
+    ports:
+      - "8081:8081" # Expose on port 8080 for blue
+    environment:
+      - SPRING_PROFILES_ACTIVE=blue # Optional: Spring profiles
+    depends_on:
+      - mysql-blue
+  mysql-blue:
+    image: mysql:latest
+    environment:
+      MYSQL_ROOT_PASSWORD: your_root_password
+      MYSQL_DATABASE: your_database
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data_blue:/var/lib/mysql
+
+volumes:
+  mysql_data_blue:
