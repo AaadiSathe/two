@@ -1,21 +1,29 @@
-
 services:
   app-green:
+    container_name: app-green
     image: your-spring-boot-image:latest
     ports:
-      - "8082:8081" # Expose app-green on port 8082
+      - "8082:8081"
     environment:
       - SPRING_PROFILES_ACTIVE=green
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-green:3306/project
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=rootpassword123
     depends_on:
       mysql-green:
         condition: service_healthy
+
   mysql-green:
+    container_name: mysql-green
     image: mysql:latest
     environment:
-      MYSQL_ROOT_PASSWORD: your_root_password
-      MYSQL_DATABASE: your_database
+      - MYSQL_ROOT_PASSWORD=rootpassword123
+      - MYSQL_DATABASE=project
+      - MYSQL_USER=springuser
+      - MYSQL_PASSWORD=springpassword
+      - MYSQL_ROOT_HOST=%
     ports:
-      - "3307:3306"
+      - "3308:3306"
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
