@@ -9,11 +9,12 @@ services:
     depends_on:
       mysql-blue:
         condition: service_healthy
+
   mysql-blue:
     image: mysql:latest
     environment:
-      MYSQL_ROOT_PASSWORD: your_root_password
-      MYSQL_DATABASE: your_database
+      MYSQL_ROOT_PASSWORD: rootpassword123
+      MYSQL_DATABASE: project
     ports:
       - "3306:3306"
     healthcheck:
