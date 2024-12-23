@@ -1,4 +1,4 @@
-version: "3.9"
+
 services:
   app-blue:
     image: your-spring-boot-image:latest
