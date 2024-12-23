@@ -3,11 +3,12 @@ services:
   app-blue:
     image: your-spring-boot-image:latest
     ports:
-      - "8081:8081" # Expose on port 8080 for blue
+      - "8081:8081"
     environment:
-      - SPRING_PROFILES_ACTIVE=blue # Optional: Spring profiles
+      - SPRING_PROFILES_ACTIVE=blue
     depends_on:
-      - mysql-blue
+      mysql-blue:
+        condition: service_healthy
   mysql-blue:
     image: mysql:latest
     environment:
@@ -15,8 +16,11 @@ services:
       MYSQL_DATABASE: your_database
     ports:
       - "3306:3306"
-    volumes:
-      - mysql_data_blue:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   mysql_data_blue:
