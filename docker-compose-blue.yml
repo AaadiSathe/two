@@ -1,22 +1,30 @@
 
 services:
   app-blue:
+    container_name: app-blue
     image: your-spring-boot-image:latest
     ports:
       - "8081:8081"
     environment:
       - SPRING_PROFILES_ACTIVE=blue
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-blue:3306/project
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=rootpassword123
     depends_on:
       mysql-blue:
         condition: service_healthy
 
   mysql-blue:
+    container_name: mysql-blue
     image: mysql:latest
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword123
-      MYSQL_DATABASE: project
+      - MYSQL_ROOT_PASSWORD=rootpassword123
+      - MYSQL_DATABASE=project
+      - MYSQL_USER=springuser
+      - MYSQL_PASSWORD=springpassword
+      - MYSQL_ROOT_HOST=%
     ports:
-      - "3306:3306"
+      - "3307:3306"
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
