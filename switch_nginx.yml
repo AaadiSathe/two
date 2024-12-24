@@ -1,7 +1,7 @@
 ---
 - name: Switch NGINX Configuration for raigdkaragro.com
   hosts: localhost
-  become: yes
+  become: true
   vars:
     current_color: "{{ deployment_color }}"  # Passed from Jenkins
 
