@@ -10,16 +10,12 @@
       copy:
         content: |
           # NGINX configuration for raigdkaragro.com
-          # Site: raigdkaragro.com (Agricultural Platform)
-          # This configuration dynamically routes traffic to the active deployment (blue or green).
           server {
-              listen 80 default_server;
-              listen [::]:80 default_server;
-              root /var/www/html;
-              server_name adityasathe.com localhost:9000;
+              listen 3000;
+              server_name localhost;
 
               location / {
-                  # Dynamically route to the active deployment container
+                  # Dynamically route to the active Spring Boot deployment
                   proxy_pass http://localhost:{{ '8081' if current_color == 'blue' else '8082' }};
                   proxy_set_header Host $host;
                   proxy_set_header X-Real-IP $remote_addr;
