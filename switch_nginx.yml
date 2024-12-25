@@ -1,5 +1,5 @@
 ---
-- name: Switch NGINX Configuration for raigdkaragro.com
+- name: Switch NGINX Configuration for localhost:3000 
   hosts: localhost
   become: true
   vars:
@@ -9,7 +9,7 @@
     - name: Set NGINX configuration for blue-green deployment
       copy:
         content: |
-          # NGINX configuration for raigdkaragro.com
+          # NGINX configuration for localhost:3000
           server {
               listen 3000;
               server_name localhost;
