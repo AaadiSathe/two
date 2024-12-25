@@ -1,57 +1,52 @@
 ---
-- name: Switch NGINX Configuration for Blue/Green Deployment
+- name: Switch NGINX Configuration for localhost:3000 
   hosts: localhost
   become: true
   vars:
-    current_color: "{{ TARGET_ENVIRONMENT | default('blue') }}" # Default to blue if not set
-    blue_port: 8081
-    green_port: 8082
-    nginx_config_file: /etc/nginx/sites-available/default # Define config file path
+    current_color: "{{ TARGET_ENVIRONMENT }}"  # Passed from Jenkins
 
   tasks:
-    - name: Ensure NGINX configuration directory exists
-      file:
-        path: "{{ nginx_config_file | dirname }}"
-        state: directory
-        mode: 0755
-
     - name: Set NGINX configuration for blue-green deployment
-      blockinfile: # Use blockinfile for easier management
-        path: "{{ nginx_config_file }}"
-        block: |
+      copy:
+        content: |
+          # NGINX configuration for localhost:3000
           server {
-            listen 3000;
-            server_name localhost;
+              listen 3000;
+              server_name localhost;
 
-            location / {
-              proxy_pass http://localhost:{{ blue_port if current_color == 'blue' else green_port }};
-              proxy_set_header Host $host;
-              proxy_set_header X-Real-IP $remote_addr;
-              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-              proxy_set_header X-Forwarded-Proto $scheme;
-              proxy_http_version 1.1;
-              proxy_set_header Upgrade $http_upgrade;
-              proxy_set_header Connection "upgrade";
-            }
+              location / {
+                  # Dynamically route to the active Spring Boot deployment
+                  proxy_pass http://localhost:{{ '8081' if current_color == 'blue' else '8082' }};
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection "upgrade";
+              }
 
-            location ~ /\.(ht|HT) {
-              deny all;
-            }
+              location ~ /\.(ht|HT) {
+                  deny all;
+              }
           }
+        dest: /etc/nginx/sites-available/default
       notify:
-        - test nginx config
-        - reload nginx
+        - restart nginx
 
     - name: Test NGINX configuration
       command: nginx -t
       register: nginx_test
-      changed_when: false # Don't report as changed if only testing
       failed_when: nginx_test.rc != 0
-      delegate_to: localhost # Ensure test runs on the localhost
-      run_once: true # Only test once
 
-  handlers:
-    - name: reload nginx
+    - name: Restart NGINX
       service:
         name: nginx
-        state: reloaded # Use reload instead of restart for minimal downtime
+        state: restarted
+
+  handlers:
+    - name: restart nginx
+      service:
+        name: nginx
+        state: restarted
+
