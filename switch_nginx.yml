@@ -1,64 +1,35 @@
-- name: Switch NGINX Configuration for 3.110.134.164
-  hosts: localhost
-  become: yes
-  vars:
-    current_color: "{{ TARGET_ENVIRONMENT }}"  # Passed from Jenkins (either 'blue' or 'green')
+upstream backend {
+    {% if current_color == 'green' %}
+    server localhost:8082;  # Green environment
+    {% else %}
+    server localhost:8081;  # Blue environment
+    {% endif %}
+}
 
-  tasks:
-    - name: Set NGINX configuration for blue-green deployment
-      copy:
-        content: |
-          # NGINX configuration for 3.110.134.164
-          # This configuration dynamically routes traffic to the active deployment (blue or green).
-          upstream backend {
-              {% if current_color == 'green' %}
-              server localhost:8082;  # Green environment
-              {% else %}
-              server localhost:8081;  # Blue environment
-              {% endif %}
-              # Use IP Hash for session persistence
-              ip_hash;
-          }
+server {
+    listen 80;
+    server_name 3.110.134.164;
 
-          server {
-              listen 80 default_server;
-              listen [::]:80 default_server;
-              root /var/www/html;
-              server_name localhost;
+    location / {
+        proxy_pass http://backend;  # Forward traffic to the upstream
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
 
-              # Dynamically route to the active deployment container
-              location / {
-                  proxy_pass http://backend;  # Proxy to the correct backend (blue or green)
-                  proxy_set_header Host $host;
-                  proxy_set_header X-Real-IP $remote_addr;
-                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                  proxy_set_header X-Forwarded-Proto $scheme;
-                  proxy_http_version 1.1;
-                  proxy_set_header Upgrade $http_upgrade;
-                  proxy_set_header Connection "upgrade";
-              }
+        # Enable WebSocket support
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
 
-              # Security: Block access to hidden files
-              location ~ /\.(ht|HT) {
-                  deny all;
-              }
-          }
-        dest: /etc/nginx/sites-available/default
-      notify:
-        - restart nginx
+        # Timeouts to handle slow connections
+        proxy_read_timeout 90;
+        proxy_connect_timeout 90;
+        proxy_send_timeout 90;
+    }
 
-    - name: Test NGINX configuration
-      command: nginx -t
-      register: nginx_test
-      failed_when: nginx_test.rc != 0
-
-    - name: Restart NGINX
-      service:
-        name: nginx
-        state: restarted
-
-  handlers:
-    - name: restart nginx
-      service:
-        name: nginx
-        state: restarted
+    # Security: Block access to hidden files
+    location ~ /\.(ht|HT) {
+        deny all;
+    }
+}
