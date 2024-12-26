@@ -1,50 +1,41 @@
 ---
-- name: Switch NGINX Configuration for 3.110.134.164
+- name: Deploy NGINX Blue-Green Configuration
   hosts: localhost
   become: yes
   vars:
-    current_color: "{{ TARGET_ENVIRONMENT }}"  # Passed from Jenkins (either 'blue' or 'green')
+    current_color: "{{ TARGET_ENVIRONMENT | default('blue') }}"  # Defaults to blue if not specified
 
   tasks:
+    - name: Ensure NGINX is installed
+      apt:
+        name: nginx
+        state: present
+        update_cache: yes
+
     - name: Set NGINX configuration for blue-green deployment
-      copy:
-        content: |
-          # NGINX configuration for 3.110.134.164
-          # This configuration dynamically routes traffic to the active deployment (blue or green).
-          upstream backend {
-              {% raw %}
-              {% if current_color == 'green' %}
-              server localhost:8082;  # Green environment
-              {% else %}
-              server localhost:8081;  # Blue environment
-              {% endif %}
-              {% endraw %}
-          }
-
-          server {
-              listen 80 default_server;
-              listen [::]:80 default_server;
-              root /var/www/html;
-              server_name 3.110.134.164;
-
-              # Dynamically route to the active deployment container
-              location / {
-                  proxy_pass http://backend;  # Proxy to the correct backend (blue or green)
-                  proxy_set_header Host $host;
-                  proxy_set_header X-Real-IP $remote_addr;
-                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                  proxy_set_header X-Forwarded-Proto $scheme;
-                  proxy_http_version 1.1;
-                  proxy_set_header Upgrade $http_upgrade;
-                  proxy_set_header Connection "upgrade";
-              }
-
-              # Security: Block access to hidden files
-              location ~ /\.(ht|HT) {
-                  deny all;
-              }
-          }
+      template:
+        src: templates/nginx.conf.j2
         dest: /etc/nginx/sites-available/default
+        owner: root
+        group: root
+        mode: '0644'
+        validate: 'nginx -t -c %s'
+      notify:
+        - restart nginx
+
+    - name: Create symlink for NGINX configuration
+      file:
+        src: /etc/nginx/sites-available/default
+        dest: /etc/nginx/sites-enabled/default
+        state: link
+        force: yes
+      notify:
+        - restart nginx
+
+    - name: Remove default NGINX configuration if exists
+      file:
+        path: /etc/nginx/sites-enabled/default.conf
+        state: absent
       notify:
         - restart nginx
 
@@ -52,14 +43,17 @@
       command: nginx -t
       register: nginx_test
       failed_when: nginx_test.rc != 0
+      changed_when: false
 
-    - name: Restart NGINX
+    - name: Ensure NGINX is started and enabled
       service:
         name: nginx
-        state: restarted
+        state: started
+        enabled: yes
 
   handlers:
     - name: restart nginx
       service:
         name: nginx
         state: restarted
+
