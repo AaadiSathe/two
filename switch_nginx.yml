@@ -1,22 +1,34 @@
----
-- name: Switch NGINX Configuration for localhost:3000 
+- name: Switch NGINX Configuration for 3.110.134.164
   hosts: localhost
-  become: true
+  become: yes
   vars:
-    current_color: "{{ TARGET_ENVIRONMENT }}"  # Passed from Jenkins
+    current_color: "{{ TARGET_ENVIRONMENT }}"  # Passed from Jenkins (either 'blue' or 'green')
 
   tasks:
     - name: Set NGINX configuration for blue-green deployment
       copy:
         content: |
-          # NGINX configuration for localhost:3000
+          # NGINX configuration for 3.110.134.164
+          # This configuration dynamically routes traffic to the active deployment (blue or green).
+          upstream backend {
+              {% if current_color == 'green' %}
+              server localhost:8082;  # Green environment
+              {% else %}
+              server localhost:8081;  # Blue environment
+              {% endif %}
+              # Use IP Hash for session persistence
+              ip_hash;
+          }
+
           server {
-              listen 3000;
+              listen 80 default_server;
+              listen [::]:80 default_server;
+              root /var/www/html;
               server_name localhost;
 
+              # Dynamically route to the active deployment container
               location / {
-                  # Dynamically route to the active Spring Boot deployment
-                  proxy_pass http://localhost:{{ '8081' if current_color == 'blue' else '8082' }};
+                  proxy_pass http://backend;  # Proxy to the correct backend (blue or green)
                   proxy_set_header Host $host;
                   proxy_set_header X-Real-IP $remote_addr;
                   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -26,6 +38,7 @@
                   proxy_set_header Connection "upgrade";
               }
 
+              # Security: Block access to hidden files
               location ~ /\.(ht|HT) {
                   deny all;
               }
@@ -49,4 +62,3 @@
       service:
         name: nginx
         state: restarted
-
