@@ -1,0 +1,50 @@
+services:
+  app-blue:
+    container_name: app-blue
+    image: your-spring-boot-image:latest
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=blue
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/spring_project
+      - SPRING_DATASOURCE_USERNAME=springuser
+      - SPRING_DATASOURCE_PASSWORD=springpassword
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  app-green:
+    container_name: app-green
+    image: your-spring-boot-image:latest
+    ports:
+      - "8082:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=green
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/spring_project
+      - SPRING_DATASOURCE_USERNAME=springuser
+      - SPRING_DATASOURCE_PASSWORD=springpassword
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  mysql:
+    container_name: mysql
+    image: mysql:latest
+    environment:
+      - MYSQL_ROOT_PASSWORD=rootpassword123
+      - MYSQL_ROOT_HOST=%
+      - MYSQL_DATABASE=spring_project
+      - MYSQL_USER=springuser
+      - MYSQL_PASSWORD=springpassword
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mysql_data:
