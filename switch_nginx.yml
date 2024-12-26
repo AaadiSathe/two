@@ -3,7 +3,7 @@
   hosts: localhost
   become: yes
   vars:
-    current_color: "{{ deployment_color }}"  # Passed from Jenkins
+    current_color: "{{ TARGET_ENVIRONMENT }}"  # Passed from Jenkins
 
   tasks:
     - name: Set NGINX configuration for blue-green deployment
