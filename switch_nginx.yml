@@ -1,4 +1,4 @@
-- name: Switch NGINX Configuration for <ip> 43.204.29.107
+- name: Switch NGINX Configuration for 3.110.134.164
   hosts: localhost
   become: yes
   vars:
@@ -8,7 +8,7 @@
     - name: Set NGINX configuration for blue-green deployment
       copy:
         content: |
-          # NGINX configuration for 13.232.235.186
+          # NGINX configuration for 3.110.134.164
           # This configuration dynamically routes traffic to the active deployment (blue or green).
           upstream backend {
               {% if current_color == 'green' %}
@@ -20,6 +20,140 @@
               ip_hash;
           }
 
+          server {
+              listen 80 default_server;
+              listen [::]:80 default_server;
+              root /var/www/html;
+              server_name 43.204.29.107;  # Use EC2 instance IP
+
+              # Dynamically route to the active deployment container
+              location / {
+                  proxy_pass http://backend;  # Proxy to the correct backend (blue or green)
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection "upgrade";
+                  proxy_cache_bypass $http_upgrade;
+                  proxy_read_timeout 90;  # Increased timeout for long-running requests
+                  proxy_connect_timeout 30;  # Avoid 502 errors during connection switching
+              }
+
+              # Security: Block access to hidden files
+              location ~ /\.(ht|HT) {
+                  deny all;
+              }
+
+              # Expose NGINX status for Prometheus metrics
+              location /nginx_status {
+                  stub_status on;
+                  access_log off;
+                  allow 43.204.29.107;  # Allow Prometheus to access NGINX status on EC2 IP
+                  deny all;  # Deny external access
+              }
+          }          server {
+              listen 80 default_server;
+              listen [::]:80 default_server;
+              root /var/www/html;
+              server_name 43.204.29.107;  # Use EC2 instance IP
+
+              # Dynamically route to the active deployment container
+              location / {
+                  proxy_pass http://backend;  # Proxy to the correct backend (blue or green)
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection "upgrade";
+                  proxy_cache_bypass $http_upgrade;
+                  proxy_read_timeout 90;  # Increased timeout for long-running requests
+                  proxy_connect_timeout 30;  # Avoid 502 errors during connection switching
+              }
+
+              # Security: Block access to hidden files
+              location ~ /\.(ht|HT) {
+                  deny all;
+              }
+
+              # Expose NGINX status for Prometheus metrics
+              location /nginx_status {
+                  stub_status on;
+                  access_log off;
+                  allow 43.204.29.107;  # Allow Prometheus to access NGINX status on EC2 IP
+                  deny all;  # Deny external access
+              }
+          }          server {
+              listen 80 default_server;
+              listen [::]:80 default_server;
+              root /var/www/html;
+              server_name 43.204.29.107;  # Use EC2 instance IP
+
+              # Dynamically route to the active deployment container
+              location / {
+                  proxy_pass http://backend;  # Proxy to the correct backend (blue or green)
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection "upgrade";
+                  proxy_cache_bypass $http_upgrade;
+                  proxy_read_timeout 90;  # Increased timeout for long-running requests
+                  proxy_connect_timeout 30;  # Avoid 502 errors during connection switching
+              }
+
+              # Security: Block access to hidden files
+              location ~ /\.(ht|HT) {
+                  deny all;
+              }
+
+              # Expose NGINX status for Prometheus metrics
+              location /nginx_status {
+                  stub_status on;
+                  access_log off;
+                  allow 43.204.29.107;  # Allow Prometheus to access NGINX status on EC2 IP
+                  deny all;  # Deny external access
+              }
+          }          server {
+              listen 80 default_server;
+              listen [::]:80 default_server;
+              root /var/www/html;
+              server_name 43.204.29.107;  # Use EC2 instance IP
+
+              # Dynamically route to the active deployment container
+              location / {
+                  proxy_pass http://backend;  # Proxy to the correct backend (blue or green)
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection "upgrade";
+                  proxy_cache_bypass $http_upgrade;
+                  proxy_read_timeout 90;  # Increased timeout for long-running requests
+                  proxy_connect_timeout 30;  # Avoid 502 errors during connection switching
+              }
+
+              # Security: Block access to hidden files
+              location ~ /\.(ht|HT) {
+                  deny all;
+              }
+
+              # Expose NGINX status for Prometheus metrics
+              location /nginx_status {
+                  stub_status on;
+                  access_log off;
+                  allow 43.204.29.107;  # Allow Prometheus to access NGINX status on EC2 IP
+                  deny all;  # Deny external access
+              }
+          }          
+          
           server {
               listen 80 default_server;
               listen [::]:80 default_server;
@@ -54,15 +188,25 @@
                   deny all;  # Deny external access
               }
           }
+          
         dest: /etc/nginx/sites-available/default
       notify:
-        - reload nginx
+        - restart nginx
 
     - name: Test NGINX configuration
       command: nginx -t
       register: nginx_test
       failed_when: nginx_test.rc != 0
 
+    - name: Restart NGINX
+      service:
+        name: nginx
+        state: restarted
+
   handlers:
-    - name: reload nginx
-      command: nginx -s reload
+    - name: restart nginx
+      service:
+        name: nginx
+        state: restarted
+
+
